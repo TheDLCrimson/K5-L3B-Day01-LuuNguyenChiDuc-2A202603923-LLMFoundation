@@ -8,9 +8,9 @@
 
 | Tệp | Có? |
 | --- | --- |
-| [`day01_lab.ipynb`](day01_lab.ipynb) - notebook đã chạy, còn output | ☐ |
-| [`lab1_report.json`](lab1_report.json) - do ô "Báo cáo cuối" sinh ra | ☐ |
-| [`hand_calc.jpg`](hand_calc.jpg) - ảnh tính tay có các bước | ☐ |
+| [`day01_lab.ipynb`](day01_lab.ipynb) - notebook đã chạy, còn output | ☑ |
+| [`lab1_report.json`](lab1_report.json) - do ô "Báo cáo cuối" sinh ra | ☑ |
+| [`hand_calc_1.jpg`](hand_calc_1.jpg), [`hand_calc_2.jpg`](hand_calc_2.jpg) - ảnh tính tay có các bước | ☑ |
 
 ## 2. Kết quả chính
 
@@ -19,14 +19,14 @@ Hàng LLM chỉ đo trên SUB 40 tin.
 
 | Cách | F1 test | F1 SUB 40 | p95 ms/tin | USD / 1k tin |
 | --- | ---: | ---: | ---: | ---: |
-| 1. BoW + LogReg (tự code) | 0.875 | 0.919 | 0.26 | 0 |
-| 2. BoW + MLP | 0.928 | 0.923 | 1.19 | 0 |
-| 3a. Encoder (MiniLM) + kNN | 0.884 | 0.974 | ~42 | 0 |
-| 3b. Encoder (MiniLM) + LogReg | 0.938 | 0.974 | ~22 | 0 |
-| 3c. Encoder (MiniLM) + MLP head | 0.933 | 0.950 | 58.95 | 0 |
-| 4a. LLM nhỏ zero-shot | - | 0.950 | 1805 | 0.0075 |
-| 4b. LLM lớn zero-shot | - | 0.974 | 2236 | 0.011 |
-| 4c. LLM nhỏ few-shot | - | 0.950 | 1866 | 0.019 |
+| 1. BoW + LogReg (tự code) | 0.875 | 0.919 | 0.05 | 0 |
+| 2. BoW + MLP | 0.928 | 0.923 | 0.19 | 0 |
+| 3a. Encoder (MiniLM) + kNN | 0.884 | 0.974 | 38.1 | 0 |
+| 3b. Encoder (MiniLM) + LogReg | 0.938 | 0.974 | 17.0 | 0 |
+| 3c. Encoder (MiniLM) + MLP head | 0.933 | 0.950 | 27.0 | 0 |
+| 4a. LLM nhỏ zero-shot | - | 0.950 | 1107 | 0.008 |
+| 4b. LLM lớn zero-shot | - | 0.974 | 1245 | 0.011 |
+| 4c. LLM nhỏ few-shot | - | 0.950 | 1189 | 0.019 |
 
 ## 3. Dự đoán và thực tế
 
@@ -38,14 +38,15 @@ F1 vẫn 0.928, bằng MLP có ReLU, nghĩa là phần hơn Phần 1 (0.875) đ�
 Thực tế loss vọt lên ~2.6 ở vài epoch đầu rồi hội tụ về 0.005, thấp nhất trong 3 mức lr (lr=0.5: 0.083, lr=0.001: 0.627).
 Loss của logistic regression là hàm lồi nên bước lớn chỉ dao động lúc đầu, không phân kỳ; nhưng train loss thấp như vậy là gần học thuộc tập train.
 
-**`llm_models`:** Mình đoán LLM có thể không thắng 3b vì 3b được train trực tiếp trên nhãn.
-Trên SUB, LLM lớn đạt 0.974, bằng 3b (hoà, chỉ sai 1 tin).
-Trên 50 case khó, LLM nhỏ đạt F1 0.951 trong khi 3b chỉ 0.717: không cần nhãn nhưng LLM bền vững hơn nhiều với tin lạ.
+**`hard_eval`:** Mình đoán BoW sẽ làm tệ ở nhóm "Tưởng spam" và "Nói về spam".
+Thực tế BoW đạt 100% ở cả hai nhóm, nhưng chỉ 10% / 0% ở "Spam giọng tự nhiên" và 17% / 0% ở "Né từ khoá".
+Lý do: BoW đoán ham cho gần như mọi tin lạ (accuracy tổng 50-52%), nên nó "đúng" ở các nhóm có nhãn ham và sai gần hết các nhóm spam không có từ khoá quen thuộc.
+Ngược lại, LLM nhỏ không cần nhãn mà vẫn đạt F1 0.935 trên case khó, trong khi 3b chỉ 0.717.
 
 ## 4. Phân tích 50 case khó
 
 BoW tụt nhiều nhất: BoW + MLP từ F1 0.923 xuống 0.324, BoW + LogReg từ 0.919 xuống 0.333.
-Embedding giảm còn ~0.72, LLM gần như giữ nguyên (0.950 → 0.951).
+Embedding giảm còn ~0.72, LLM gần như giữ nguyên (0.950 → 0.935).
 BoW + MLP đúng 0% ở nhóm "Spam giọng tự nhiên" và "Né từ khoá".
 
 - **#29** "C0ngr4tulat10ns! Y0u h4ve w0n a £1000 g1ft c4rd...": BoW + MLP đoán ham. Các token đã bị đổi chữ thành số nên không có trong vocab 2000 từ, vector gần như rỗng, mô hình không thấy tín hiệu spam nào.
@@ -62,12 +63,12 @@ LLM với prompt phòng thủ (4d) lại sai ở nhóm "Tưởng spam" (#1, #2, 
 
 ## 6. Phương án cho sản phẩm thật
 
-Đạt p95 < 50 ms: BoW + LogReg (0.26 ms), BoW + MLP (1.19 ms), 3a (~42 ms), 3b (~22 ms).
-LLM (~1.8-2.2 s) và 3c (59 ms) không đạt.
+Đạt p95 < 50 ms: BoW + LogReg (0.05 ms), BoW + MLP (0.19 ms), 3a (38.1 ms), 3b (17.0 ms), 3c (27.0 ms).
+LLM (~1.1-1.2 s) không đạt.
 Chọn **3b Encoder + LogReg**: đạt SLA, F1 test cao nhất (0.938), F1 SUB 0.974, và trên 50 case khó tốt hơn BoW nhiều (0.717 so với ~0.33).
 Đánh đổi: phải chạy encoder MiniLM (cần nhiều worker hoặc GPU để đạt ~116 tin/s), và vẫn yếu với spam giọng tự nhiên.
 Nếu dùng LLM nhỏ cho toàn bộ: 10 triệu tin/ngày × $0.0075/1k ≈ $75/ngày ≈ $2,250/tháng, và vẫn không đạt độ trễ.
-Thiết kế lai: 3b xử lý mọi tin, chỉ tin "lưỡng lự" (p ∈ [0.3, 0.7]) được gửi sang LLM xử lý bất đồng bộ, giữ được độ trễ cho phần lớn tin và tận dụng độ bền của LLM (F1 0.951 trên case khó) với chi phí nhỏ.
+Thiết kế lai: 3b xử lý mọi tin, chỉ tin "lưỡng lự" (p ∈ [0.3, 0.7]) được gửi sang LLM xử lý bất đồng bộ, giữ được độ trễ cho phần lớn tin và tận dụng độ bền của LLM (F1 0.935 trên case khó) với chi phí nhỏ.
 
 ## 7. AI log và điều đã học
 
